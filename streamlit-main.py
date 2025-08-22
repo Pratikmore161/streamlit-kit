@@ -97,30 +97,90 @@ Booking (~80 words) {bookingHeader}<p>... end with {contactSection}</p>
 """
     return prompt
 
-# Streamlit UI
+# --- Streamlit App ---
 st.title("🏥 Clinic SEO Content Generator")
 
-st.write("Upload a JSON file with clinic data and generate SEO-optimized content.")
+left_col, right_col = st.columns([2, 1])
 
-uploaded_file = st.file_uploader("Upload Clinic Data JSON", type=["json"])
-
-word_count = st.number_input("Word Count (must match prompt structure)", min_value=500, max_value=800, value=500, step=10)
-
-if uploaded_file:
-    data = json.load(uploaded_file)
-
-    if st.button("Generate SEO Content"):
+with left_col:
+    st.write("Enter clinic data or upload a JSON file to generate SEO-optimized content.")
+    
+    # Input method selection
+    input_method = st.radio("Input Method:", ["Manual Entry", "Upload JSON"])
+    
+    data = {}
+    if input_method == "Manual Entry":
+        st.subheader("Enter Clinic Details")
+        data["name"] = st.text_input("Clinic Name")
+        data["specialty"] = st.text_input("Main Specialty")
+        data["subSpecialties"] = st.text_input("Sub-specialties (comma-separated)")
+        data["about"] = st.text_area("About the Clinic")
+        data["location"] = st.text_input("Location")
+        data["email"] = st.text_input("Email")
+        data["phone"] = st.text_input("Phone")
+        data["website"] = st.text_input("Website")
+    else:
+        uploaded_file = st.file_uploader("Upload Clinic Data JSON", type=["json"])
+        if uploaded_file:
+            data = json.load(uploaded_file)
+            if isinstance(data, list):
+                st.warning("Multiple records found. Using the first record only.")
+                data = data[0]  # Take first record if multiple exist
+    
+    word_count = st.number_input("Word Count", min_value=500, max_value=800, value=500, step=10)
+    
+    if st.button("Generate SEO Content") and data:
         with st.spinner("Generating SEO content with Gemini..."):
-            prompt = build_prompt(data, word_count)
+            # Get the current prompt from the right column
+            prompt = st.session_state.get("current_prompt", build_prompt(
+                data,
+                list(data.keys())[:5],  # First 5 keys as default headers
+                word_count
+            ))
+            
             response = model.generate_content(prompt)
             content = response.text
 
         st.subheader("Generated SEO Content")
         st.markdown(content, unsafe_allow_html=True)
 
-        st.download_button(
-            "Download HTML",
-            content,
-            file_name=f"{data.get('name','clinic').replace(' ','-').lower()}-seo.html",
-            mime="text/html"
+        if data.get('name'):
+            st.download_button(
+                "Download HTML",
+                content,
+                file_name=f"{data.get('name','clinic').replace(' ','-').lower()}-seo.html",
+                mime="text/html"
+            )
+
+with right_col:
+    st.subheader("📝 Prompt Editor")
+    
+    # Initialize default prompt in session_state if we have data
+    if data:
+        if "current_prompt" not in st.session_state:
+            st.session_state["current_prompt"] = build_prompt(
+                data,
+                list(data.keys())[:5],  # First 5 keys as default headers
+                word_count
+            )
+    
+    # Custom prompt box
+    custom_prompt = st.checkbox("Use custom prompt")
+    
+    if custom_prompt:
+        prompt_text = st.text_area(
+            "Edit Prompt",
+            value=st.session_state.get("current_prompt", ""),
+            height=400,
+            key="current_prompt"
         )
+    else:
+        # Show read-only current prompt
+        st.text_area(
+            "Current Prompt",
+            value=st.session_state.get("current_prompt", "No prompt generated yet."),
+            height=400,
+            disabled=True
+        )
+    
+    st.caption("✏️ Check 'Use custom prompt' to edit the prompt before generating content.")
