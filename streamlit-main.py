@@ -116,71 +116,73 @@ st.title("🏥 Clinic SEO Content Generator")
 if "prompt_template" not in st.session_state:
     st.session_state["prompt_template"] = get_default_prompt_template()
 
-left_col, right_col = st.columns([2, 1])
+st.write("Upload a JSON file to generate SEO-optimized content with your custom prompt.")
 
-with left_col:
-    st.write("Upload a JSON file to generate SEO-optimized content with your custom prompt.")
+# Only JSON upload - removed manual entry
+uploaded_file = st.file_uploader("Upload Clinic Data JSON", type=["json"])
+data = {}
+if uploaded_file:
+    data = json.load(uploaded_file)
+    if isinstance(data, list):
+        st.warning("Multiple records found. Using the first record only.")
+        data = data[0]  # Take first record if multiple exist
     
-    # Only JSON upload - removed manual entry
-    uploaded_file = st.file_uploader("Upload Clinic Data JSON", type=["json"])
-    data = {}
-    if uploaded_file:
-        data = json.load(uploaded_file)
-        if isinstance(data, list):
-            st.warning("Multiple records found. Using the first record only.")
-            data = data[0]  # Take first record if multiple exist
-        
-        # Show preview of loaded data
-        st.subheader("📋 Loaded Data Preview")
-        st.json(data)
-    
-    word_count = st.number_input("Word Count", min_value=500, max_value=800, value=500, step=10)
-    
-    if st.button("Generate SEO Content") and data:
-        with st.spinner("Generating SEO content with Gemini..."):
-            # Use the current prompt template from session state
-            prompt = build_dynamic_prompt(data, st.session_state["prompt_template"], word_count)
-            
-            if prompt.startswith("Error"):
-                st.error(prompt)
-            else:
-                response = model.generate_content(prompt)
-                content = response.text
+    # Show preview of loaded data
+    st.subheader("📋 Loaded Data Preview")
+    st.json(data)
 
-                st.subheader("Generated SEO Content")
-                st.markdown(content, unsafe_allow_html=True)
+word_count = st.number_input("Word Count", min_value=500, max_value=800, value=500, step=10)
 
-                if data.get('name'):
-                    st.download_button(
-                        "Download HTML",
-                        content,
-                        file_name=f"{data.get('name','clinic').replace(' ','-').lower()}-seo.html",
-                        mime="text/html"
-                    )
+# Dynamic Prompt Editor Section
+st.subheader("📝 Dynamic Prompt Editor")
 
-with right_col:
-    st.subheader("📝 Dynamic Prompt Editor")
-    
+col1, col2 = st.columns([3, 1])
+
+with col1:
+    # Custom prompt editor
+    st.session_state["prompt_template"] = st.text_area(
+        "Edit Prompt Template",
+        value=st.session_state["prompt_template"],
+        height=300,
+        help="Use {variable_name} placeholders. Available variables: clinic_name, main_specialty, sub_specialties, about, location, word_count, email, phone, website"
+    )
+
+with col2:
     # Reset to default button
     if st.button("🔄 Reset to Default Template"):
         st.session_state["prompt_template"] = get_default_prompt_template()
         st.rerun()
     
-    # Custom prompt editor
-    st.session_state["prompt_template"] = st.text_area(
-        "Edit Prompt Template",
-        value=st.session_state["prompt_template"],
-        height=400,
-        help="Use {variable_name} placeholders. Available variables: clinic_name, main_specialty, sub_specialties, about, location, word_count, email, phone, website"
-    )
-    
     # Show available variables
-    st.subheader("📋 Available Variables")
+    st.write("**Available Variables:**")
     variables = [
         "clinic_name", "main_specialty", "sub_specialties", 
         "about", "location", "word_count", "email", "phone", "website"
     ]
     for var in variables:
-        st.code(f"{{{var}}}")
-    
-    st.caption("💡 Modify the prompt template above to customize how the AI generates content. Use curly braces {} around variable names for dynamic substitution.")
+        st.code(f"{{{var}}}", language=None)
+
+st.caption("💡 Modify the prompt template above to customize how the AI generates content. Use curly braces {} around variable names for dynamic substitution.")
+
+# Generate button and results
+if st.button("Generate SEO Content") and data:
+    with st.spinner("Generating SEO content with Gemini..."):
+        # Use the current prompt template from session state
+        prompt = build_dynamic_prompt(data, st.session_state["prompt_template"], word_count)
+        
+        if prompt.startswith("Error"):
+            st.error(prompt)
+        else:
+            response = model.generate_content(prompt)
+            content = response.text
+
+            st.subheader("Generated SEO Content")
+            st.markdown(content, unsafe_allow_html=True)
+
+            if data.get('name'):
+                st.download_button(
+                    "Download HTML",
+                    content,
+                    file_name=f"{data.get('name','clinic').replace(' ','-').lower()}-seo.html",
+                    mime="text/html"
+                )
