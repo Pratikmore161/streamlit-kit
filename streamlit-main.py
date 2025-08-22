@@ -3,7 +3,11 @@ import json
 from google.generativeai import GenerativeModel, configure
 
 # Configure Gemini API key
-configure(api_key=st.secrets["AIzaSyBRJDdezc8PJj_tM4QA_aJTcQUqpLRMBR0"])
+if 'GEMINI_API_KEY' not in st.secrets:
+    st.error("Please set up your GEMINI_API_KEY in Streamlit secrets")
+    st.stop()
+    
+configure(api_key=st.secrets["GEMINI_API_KEY"])
 
 # Initialize model
 model = GenerativeModel("gemini-2.0-flash")
