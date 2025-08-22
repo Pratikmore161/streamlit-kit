@@ -103,29 +103,15 @@ st.title("🏥 Clinic SEO Content Generator")
 left_col, right_col = st.columns([2, 1])
 
 with left_col:
-    st.write("Enter clinic data or upload a JSON file to generate SEO-optimized content.")
-    
-    # Input method selection
-    input_method = st.radio("Input Method:", ["Manual Entry", "Upload JSON"])
+    st.write("Upload a JSON file with clinic data to generate SEO-optimized content.")
     
     data = {}
-    if input_method == "Manual Entry":
-        st.subheader("Enter Clinic Details")
-        data["name"] = st.text_input("Clinic Name")
-        data["specialty"] = st.text_input("Main Specialty")
-        data["subSpecialties"] = st.text_input("Sub-specialties (comma-separated)")
-        data["about"] = st.text_area("About the Clinic")
-        data["location"] = st.text_input("Location")
-        data["email"] = st.text_input("Email")
-        data["phone"] = st.text_input("Phone")
-        data["website"] = st.text_input("Website")
-    else:
-        uploaded_file = st.file_uploader("Upload Clinic Data JSON", type=["json"])
-        if uploaded_file:
-            data = json.load(uploaded_file)
-            if isinstance(data, list):
-                st.warning("Multiple records found. Using the first record only.")
-                data = data[0]  # Take first record if multiple exist
+    uploaded_file = st.file_uploader("Upload Clinic Data JSON", type=["json"])
+    if uploaded_file:
+        data = json.load(uploaded_file)
+        if isinstance(data, list):
+            st.warning("Multiple records found. Using the first record only.")
+            data = data[0]  # Take first record if multiple exist
     
     word_count = st.number_input("Word Count", min_value=500, max_value=800, value=500, step=10)
     
@@ -164,7 +150,22 @@ with right_col:
                 word_count
             )
     
-    # Custom prompt box
+    # Show the default prompt template
+    st.markdown("### Default Prompt Template")
+    st.markdown("""
+```
+Consider yourself as a professional medical SEO content writer. Create an SEO-optimized content about {clinic_name} strictly based on the provided data.
+
+STRICT Requirements:
+- Word Count: Exactly {word_count} words
+- Structure: ~140 intro, ~140 expertise, ~140 services, ~80 booking
+- Write in 3rd person, neutral tone
+- Use proper HTML formatting
+- Include relevant links and keywords
+```
+""")
+    
+    # Custom prompt toggle
     custom_prompt = st.checkbox("Use custom prompt")
     
     if custom_prompt:
@@ -175,10 +176,10 @@ with right_col:
             key="current_prompt"
         )
     else:
-        # Show read-only current prompt
+        # Show current prompt in read-only mode
         st.text_area(
             "Current Prompt",
-            value=st.session_state.get("current_prompt", "No prompt generated yet."),
+            value=st.session_state.get("current_prompt", "Upload a JSON file to generate the prompt."),
             height=400,
             disabled=True
         )
